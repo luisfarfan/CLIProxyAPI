@@ -52,6 +52,7 @@ VisionCoder is also offering our users a limited-time <a href="https://coder.vis
 - Amp CLI and IDE extensions support with provider routing
 - Streaming, non-streaming, and WebSocket responses where supported
 - Function calling/tools support
+- Web search grounding for Gemini models via `{type: "web_search"}` tool; Claude built-in web search via `{type: "web_search_20250305"}` tool
 - Multimodal input support (text and images)
 - Multiple accounts with round-robin load balancing (Gemini, OpenAI, Claude, Grok)
 - Simple CLI authentication flows (Gemini, OpenAI, Claude, Grok)
