@@ -121,6 +121,7 @@ PackyCode provides special discounts for our software users: register using <a h
 - Function calling/tools support
 - Web search grounding for Gemini models via `{type: "web_search"}` tool; Claude built-in web search via `{type: "web_search_20250305"}` tool
 - Multimodal input support (text and images)
+- Gemini image generation via standard `/v1/images/generations` endpoint (e.g. `gemini-3.1-flash-image`)
 - Multiple accounts with round-robin load balancing (Gemini, OpenAI, Claude, Grok)
 - Simple CLI authentication flows (Gemini, OpenAI, Claude, Grok)
 - Generative Language API Key support
