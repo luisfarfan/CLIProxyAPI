@@ -324,6 +324,7 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 		googleSearchNodes := make([][]byte, 0)
 		codeExecutionNodes := make([][]byte, 0)
 		urlContextNodes := make([][]byte, 0)
+		sawWebSearchType := false
 		for _, t := range toolResults {
 			if t.Get("type").String() == "function" {
 				fn := t.Get("function")
@@ -386,6 +387,12 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 					continue
 				}
 				googleSearchNodes = append(googleSearchNodes, googleToolNode)
+			}
+			// OpenAI-style {"type":"web_search"} maps to Gemini's native googleSearch
+			// grounding. Without this the tool is silently dropped.
+			if t.Get("type").String() == "web_search" && !t.Get("google_search").Exists() && !sawWebSearchType {
+				sawWebSearchType = true
+				googleSearchNodes = append(googleSearchNodes, []byte(`{"googleSearch":{}}`))
 			}
 			if ce := t.Get("code_execution"); ce.Exists() {
 				codeToolNode := []byte(`{}`)

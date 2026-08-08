@@ -319,7 +319,20 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 	// Tools mapping: OpenAI tools -> Claude Code tools
 	if tools := root.Get("tools"); tools.Exists() && tools.IsArray() && len(tools.Array()) > 0 {
 		var anthropicTools [][]byte
+		var webSearchBeta bool
 		tools.ForEach(func(_, tool gjson.Result) bool {
+			// Anthropic server tools (web_search_*, web_fetch_*, code_execution_*, ...)
+			// are already in Claude's own shape; pass them through untouched instead of
+			// dropping them as "not a function tool".
+			switch toolType := tool.Get("type").String(); {
+			case strings.HasPrefix(toolType, "web_search_"):
+				webSearchBeta = true
+				anthropicTools = append(anthropicTools, []byte(tool.Raw))
+				return true
+			case isClaudeServerToolType(toolType):
+				anthropicTools = append(anthropicTools, []byte(tool.Raw))
+				return true
+			}
 			if tool.Get("type").String() == "function" {
 				function := tool.Get("function")
 				anthropicTool := []byte(`{"name":"","description":""}`)
@@ -346,6 +359,10 @@ func convertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream,
 			out, _ = sjson.SetRawBytes(out, "tools", common.JoinRawArray(anthropicTools))
 		} else {
 			out, _ = sjson.DeleteBytes(out, "tools")
+		}
+		// The executor lifts "betas" out of the body into the anthropic-beta header.
+		if webSearchBeta {
+			out, _ = sjson.SetRawBytes(out, "betas.-1", []byte(`"web-search-2025-03-05"`))
 		}
 	}
 
@@ -480,4 +497,27 @@ func convertOpenAIToolResultContent(content gjson.Result) (string, bool) {
 	}
 
 	return content.Raw, false
+}
+
+// isClaudeServerToolType reports whether a typed tool declaration is an
+// Anthropic-operated server tool, which travels in Claude's own shape and must
+// survive translation verbatim. Mirrors helps.IsClaudeServerToolType, kept local
+// to avoid a translator -> executor import.
+func isClaudeServerToolType(toolType string) bool {
+	toolType = strings.ToLower(strings.TrimSpace(toolType))
+	for _, prefix := range []string{
+		"bash_",
+		"code_execution_",
+		"computer_",
+		"memory_",
+		"text_editor_",
+		"tool_search_tool_",
+		"web_fetch_",
+		"web_search_",
+	} {
+		if strings.HasPrefix(toolType, prefix) {
+			return true
+		}
+	}
+	return false
 }
